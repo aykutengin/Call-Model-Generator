@@ -13,7 +13,7 @@ public class Signal {
 	private int id;
 	private String name;
 	private String type;
-	private byte transaction;
+	private int transaction;
 	
 
 	public int getId() {
@@ -40,11 +40,11 @@ public class Signal {
 		this.type = type;
 	}
 
-	public byte getTransaction() {
+	public int getTransaction() {
 		return transaction;
 	}
 
-	public void setTransaction(byte transaction) {
+	public void setTransaction(int transaction) {
 		this.transaction = transaction;
 	}
 

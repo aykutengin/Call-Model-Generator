@@ -48,6 +48,9 @@ public class Log {
 		boolean svcTraceDetected = false;
 		boolean outgoingSignalDetected = false;
 		boolean incomingSignalDetected = false;
+		
+		List<LSC> suspendedLSC = new ArrayList<LSC>();
+		int suspendedTransactorId = 0;
 
 		try {
 			FileInputStream fstream = new FileInputStream(fileName);
@@ -58,6 +61,19 @@ public class Log {
 				// start of the transactor works
 				if (strLine.contains(PROCESS)) {
 					processDetected = true;
+					
+					if(suspendedTransactorId != 0) {						
+						Transactor tempTransactor = getTransactorByID(suspendedTransactorId);
+						
+						for (LSC lsc : suspendedLSC) {
+							if(!tempTransactor.getLscList().contains(lsc)) {
+								tempTransactor.getLscList().add(lsc);
+							}
+						}
+						suspendedLSC = new ArrayList<LSC>();
+						suspendedTransactorId = 0;
+					}
+					
 					int id = findFirstNumber(strLine);
 					currentTransactor = getTransactorByID(id);
 					if (currentTransactor == null) {
@@ -95,6 +111,8 @@ public class Log {
 				} else if (suspendDetected) {
 					int lastIndex = currentTransactor.getWorkingLines().size() - 1;
 					currentTransactor.getWorkingLines().get(lastIndex).set(1, line);
+					suspendedTransactorId = currentTransactor.getId();
+					//currentTransactor = null;
 					suspendDetected = false;
 				} else if (swapDetected) {
 					/*
@@ -168,11 +186,13 @@ public class Log {
 				if (strLine.contains(LSC.SUSPEND)) {
 					LSC lsc = findLSCFromstrLine(strLine);
 					// Checking to prevent duplicate data.
-					if (!currentTransactor.getLscList().contains(lsc)) {
+					suspendedLSC.add(lsc);		
+					//suspendedTransactor.getLscList().add(findLSCFromstrLine(strLine));
+					/*if (!currentTransactor.getLscList().contains(lsc)) {
 						currentTransactor.getLscList().add(findLSCFromstrLine(strLine));
-					}
+					}*/
 				}
-
+				// end of the LSC works
 				
 				// Finding processed signal in transactor.
 				if (strLine.contains(Signal.MESSAGE)) {
@@ -188,9 +208,9 @@ public class Log {
 						String[] secondPart = splittedStr[lastIndex].split("\\]");
 						signal.setName(parseSignalName(secondPart[1]));
 						signal.setType(secondPart[0].replace("[", ""));
-						signal.setTransaction(Byte.parseByte(secondPart[secondPart.length - 1].replace("[", "")));
+						signal.setTransaction(Integer.parseInt(secondPart[secondPart.length - 1].replace("[", "")));
 					}
-					currentTransactor.getIncomingSignals().add(signal);
+					currentTransactor.getTransactorSignal().add(signal);
 				}
 				 
 
@@ -202,7 +222,7 @@ public class Log {
 				if (strLine.contains(Signal.OUTGOING)) {
 					outgoingSignalDetected = true;
 				}
-				if ((incomingSignalDetected || outgoingSignalDetected) && strLine.contains("SIP_CB")) {
+				if ((incomingSignalDetected || outgoingSignalDetected) && strLine.contains("SIP_CB")) {					
 					Signal signal = new Signal();
 					String s = parseString(strLine, "|");
 					signal.setId(Integer.parseInt(parseString(s, " ")));
@@ -228,8 +248,6 @@ public class Log {
 			}
 			fstream.close();
 
-			callModelHelper();
-
 			/*
 			 * for (Transactor transactor : transactorList) {
 			 * System.out.println(transactor); }
@@ -242,6 +260,7 @@ public class Log {
 
 		} catch (Exception e) {
 			System.err.println("Error: " + e.getMessage());
+			//e.printStackTrace();
 		}
 		return transactorList;
 	}

@@ -22,7 +22,7 @@ public class Transactor {
 	private List<List<Integer>> workingLines = new ArrayList<>();
 	private List<Signal> incomingSignals = new ArrayList<Signal>();
 	private List<Signal> outgoingSignals = new ArrayList<Signal>();
-	private List<Signal> processedSignal = new ArrayList<Signal>();
+	private List<Signal> transactorSignal = new ArrayList<Signal>();
 
 	public Transactor(int id) {
 		this.id = id;
@@ -94,6 +94,14 @@ public class Transactor {
 
 	public void setOutgoingSignals(List<Signal> outgoingSignals) {
 		this.outgoingSignals = outgoingSignals;
+	}
+
+	public List<Signal> getTransactorSignal() {
+		return transactorSignal;
+	}
+
+	public void setTransactorSignal(List<Signal> transactorSignal) {
+		this.transactorSignal = transactorSignal;
 	}
 
 	@Override
