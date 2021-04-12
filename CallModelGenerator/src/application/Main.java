@@ -9,6 +9,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import model.LSC;
 import model.Signal;
+import model.SipSignal;
 import model.Transactor;
 import utility.Log;
 import javafx.scene.Group;
@@ -85,11 +86,40 @@ public class Main extends Application {
 					lscShape.setFill(Color.AQUA);	
 					group.getChildren().add(lscShape);
 				}
-				for (int j = 0; j < transactor.getIncomingSignals().size(); j++) {
-					double startX = i * transactorWidth + 50;
-					double startY = (j * 50) + initialSpaceY;
-					double endX = i * transactorWidth + 100;
-					double endY = (j * 50) + initialSpaceY;
+				for (int j = 0; j < transactor.getSipSignals().size(); j++) {
+					double startX = 0;
+					double startY = 0;
+					double endX = 0;
+					double endY = 0;
+					
+					SipSignal sipSignal = transactor.getSipSignals().get(j);
+					if (transactor.getType().equals(Transactor.Type.OCM)) {
+						if (sipSignal.getDirection().equals(SipSignal.Direction.Incoming)) {							
+							startX = i * transactorWidth + 50;
+							startY = (j * 50) + initialSpaceY;
+							endX = i * transactorWidth + 100;
+							endY = (j * 50) + initialSpaceY;
+						} else if (sipSignal.getDirection().equals(SipSignal.Direction.Outgoing)) {
+							startX = i * transactorWidth + 100;
+							startY = (j * 50) + initialSpaceY;
+							endX = i * transactorWidth + 50;
+							endY = (j * 50) + initialSpaceY;
+						}
+					} else if (transactor.getType().equals(Transactor.Type.TCM)) {
+						if (sipSignal.getDirection().equals(SipSignal.Direction.Incoming)) {
+							startX = i * transactorWidth + transactorWidth + transactorWidth  + 100;
+							startY = (j * 50) + initialSpaceY;
+							endX = i * transactorWidth + transactorWidth + transactorWidth 
+									+ transactorWidth;
+							endY = (j * 50) + initialSpaceY;
+						} else if (sipSignal.getDirection().equals(SipSignal.Direction.Outgoing)) {
+							startX = i * transactorWidth + transactorWidth + transactorWidth 
+									+ transactorWidth;
+							startY = (j * 50) + initialSpaceY;
+							endX = i * transactorWidth + transactorWidth + transactorWidth  + 100;
+							endY = (j * 50) + initialSpaceY;
+						}
+					}
 					drawArrowLine(startX, startY, endX, endY, group);
 				}
 			}

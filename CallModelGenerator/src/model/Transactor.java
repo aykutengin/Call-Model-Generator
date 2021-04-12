@@ -13,15 +13,18 @@ public class Transactor {
 	public enum Type {
 		OCM, CM, IWCM, TCM
 	}
-
+	
+	private static int lastlyUsedTransactorId; //For setting the outgoing signals. Outgoing signal goes from the lastly used transactor.
+	
 	private int id;
 	private Type type;
 	private List<String> initiatedServices = new ArrayList<String>();
 	private List<Handler> handlerList = new ArrayList<Handler>();
 	private List<LSC> lscList = new ArrayList<LSC>();
 	private List<List<Integer>> workingLines = new ArrayList<>();
-	private List<Signal> incomingSignals = new ArrayList<Signal>();
-	private List<Signal> outgoingSignals = new ArrayList<Signal>();
+	//private List<Signal> incomingSignals = new ArrayList<Signal>();
+	//private List<Signal> outgoingSignals = new ArrayList<Signal>();
+	private List<SipSignal> sipSignals = new ArrayList<SipSignal>();
 	private List<Signal> transactorSignal = new ArrayList<Signal>();
 
 	public Transactor(int id) {
@@ -30,6 +33,14 @@ public class Transactor {
 
 	public Transactor(Type type) {
 		this.type = type;
+	}
+
+	public static int getLastlyUsedTransactorId() {
+		return lastlyUsedTransactorId;
+	}
+
+	public static void setLastlyUsedTransactorId(int lastlyUsedTransactorId) {
+		Transactor.lastlyUsedTransactorId = lastlyUsedTransactorId;
 	}
 
 	public int getId() {
@@ -80,7 +91,7 @@ public class Transactor {
 		this.workingLines = workingLines;
 	}
 
-	public List<Signal> getIncomingSignals() {
+	/*public List<Signal> getIncomingSignals() {
 		return incomingSignals;
 	}
 
@@ -94,10 +105,18 @@ public class Transactor {
 
 	public void setOutgoingSignals(List<Signal> outgoingSignals) {
 		this.outgoingSignals = outgoingSignals;
-	}
+	}*/
 
 	public List<Signal> getTransactorSignal() {
 		return transactorSignal;
+	}
+
+	public List<SipSignal> getSipSignals() {
+		return sipSignals;
+	}
+
+	public void setSipSignals(List<SipSignal> sipSignals) {
+		this.sipSignals = sipSignals;
 	}
 
 	public void setTransactorSignal(List<Signal> transactorSignal) {

@@ -14,6 +14,7 @@ import java.util.regex.Pattern;
 import model.Handler;
 import model.LSC;
 import model.Signal;
+import model.SipSignal;
 import model.Transactor;
 
 public class Log {
@@ -36,10 +37,7 @@ public class Log {
 	 * Scriber s = new Scriber(); s.drawCallModel(transactorList); }
 	 */
 
-	public List<Transactor> readLog(String fileName) {
-		transactorList = new ArrayList<Transactor>();
-		Transactor currentTransactor = null;
-		Signal tempIncomingSignal = null;
+	public List<Transactor> readLog(String fileName) {	
 		int line = 1;
 		boolean processDetected = false;
 		boolean suspendDetected = false;
@@ -49,8 +47,10 @@ public class Log {
 		boolean outgoingSignalDetected = false;
 		boolean incomingSignalDetected = false;
 		
-		List<LSC> suspendedLSC = new ArrayList<LSC>();
-		int suspendedTransactorId = 0;
+		Transactor currentTransactor = null;
+		transactorList = new ArrayList<Transactor>();
+		SipSignal tempIncomingSignal = null;
+		List<SipSignal> tempIncomingSignals = new ArrayList<SipSignal>();
 
 		try {
 			FileInputStream fstream = new FileInputStream(fileName);
@@ -62,29 +62,28 @@ public class Log {
 				if (strLine.contains(PROCESS)) {
 					processDetected = true;
 					
-					if(suspendedTransactorId != 0) {						
-						Transactor tempTransactor = getTransactorByID(suspendedTransactorId);
-						
-						for (LSC lsc : suspendedLSC) {
-							if(!tempTransactor.getLscList().contains(lsc)) {
-								tempTransactor.getLscList().add(lsc);
-							}
-						}
-						suspendedLSC = new ArrayList<LSC>();
-						suspendedTransactorId = 0;
-					}
-					
 					int id = findFirstNumber(strLine);
 					currentTransactor = getTransactorByID(id);
 					if (currentTransactor == null) {
 						currentTransactor = new Transactor(id);
 						if (tempIncomingSignal != null) {
-							currentTransactor.getIncomingSignals().add(tempIncomingSignal);
+							currentTransactor.getSipSignals().add(tempIncomingSignal);
 							tempIncomingSignal = null;
 						}
 						transactorList.add(currentTransactor);
 					}
+					currentTransactor.setLastlyUsedTransactorId(id);
 					currentTransactor.getWorkingLines().add(Arrays.asList(line, 0));
+					
+					if (!tempIncomingSignals.isEmpty()) {
+						for (SipSignal signal : tempIncomingSignals) {
+							if (!currentTransactor.getSipSignals().contains(signal)) {
+								currentTransactor.getSipSignals().add(signal);
+							}
+						}
+						
+						tempIncomingSignals = new ArrayList<SipSignal>(); 
+					}
 
 				} else if (strLine.contains(SUSPEND)) {
 					suspendDetected = true;
@@ -111,7 +110,6 @@ public class Log {
 				} else if (suspendDetected) {
 					int lastIndex = currentTransactor.getWorkingLines().size() - 1;
 					currentTransactor.getWorkingLines().get(lastIndex).set(1, line);
-					suspendedTransactorId = currentTransactor.getId();
 					//currentTransactor = null;
 					suspendDetected = false;
 				} else if (swapDetected) {
@@ -186,11 +184,11 @@ public class Log {
 				if (strLine.contains(LSC.SUSPEND)) {
 					LSC lsc = findLSCFromstrLine(strLine);
 					// Checking to prevent duplicate data.
-					suspendedLSC.add(lsc);		
+					//suspendedLSC.add(lsc);	
 					//suspendedTransactor.getLscList().add(findLSCFromstrLine(strLine));
-					/*if (!currentTransactor.getLscList().contains(lsc)) {
+					if (!currentTransactor.getLscList().contains(lsc)) {
 						currentTransactor.getLscList().add(findLSCFromstrLine(strLine));
-					}*/
+					}
 				}
 				// end of the LSC works
 				
@@ -215,31 +213,33 @@ public class Log {
 				 
 
 				// Finding incoming signal from transactor.
-				if (strLine.contains(Signal.INCOMING)) {
+				if (strLine.contains(SipSignal.INCOMING)) {
 					incomingSignalDetected = true;
 				}
 				// Finding outgoing signal from transactor.
-				if (strLine.contains(Signal.OUTGOING)) {
+				if (strLine.contains(SipSignal.OUTGOING)) {
 					outgoingSignalDetected = true;
 				}
-				if ((incomingSignalDetected || outgoingSignalDetected) && strLine.contains("SIP_CB")) {					
-					Signal signal = new Signal();
+				if ((incomingSignalDetected || outgoingSignalDetected) && strLine.contains("SIP_CB")) {
+					//If there is any incoming and outgoing signal that means transactor suspended here. Because when the transactor is processing we should not see any signal. it happens after the work is done.
+					
+					
+					SipSignal sipSignal = new SipSignal();
 					String s = parseString(strLine, "|");
-					signal.setId(Integer.parseInt(parseString(s, " ")));
+					sipSignal.setId(Integer.parseInt(parseString(s, " ")));
 					//signal.setName(parseString(s, "SIP_", "_"));
-					signal.setName(parseSignalName(s));
+					sipSignal.setName(parseSignalName(s));
 					
 					if (incomingSignalDetected) {
-						if (currentTransactor != null) {
-							currentTransactor.getIncomingSignals().add(signal);
-							incomingSignalDetected = false;
-						} else {
-							tempIncomingSignal = signal;
-							incomingSignalDetected = false;
-						}
+						sipSignal.setDirection(SipSignal.Direction.Incoming);
+						tempIncomingSignals.add(sipSignal);
+						incomingSignalDetected = false;
 
 					} else if (outgoingSignalDetected) {
-						currentTransactor.getOutgoingSignals().add(signal);
+						sipSignal.setDirection(SipSignal.Direction.Outgoing);
+						Transactor lastUsedTransactor = getTransactorByID(currentTransactor.getId());		
+						//lastUsedTransactor.getOutgoingSignals().add(signal);
+						lastUsedTransactor.getSipSignals().add(sipSignal);
 						outgoingSignalDetected = false;
 					}
 				}
