@@ -33,13 +33,7 @@ public class Main extends Application {
 			Button button = new Button("Select log file");
 			button.setOnAction(e -> {
 				File selectedFile = fileChooser.showOpenDialog(primaryStage);
-				List<Transactor> transactorList = log.readLog(selectedFile.getAbsolutePath());
-				
-				/*for (Transactor transactor : transactorList) {
-					System.out.println(transactor.getLscList());
-				}*/
-				
-				
+				List<Transactor> transactorList = log.readLog(selectedFile.getAbsolutePath());				
 				DrawCallModel(transactorList);
 			});
 			root.setCenter(button);
@@ -64,63 +58,69 @@ public class Main extends Application {
 	 * @param transactorList
 	 */
 	private void DrawCallModel(List<Transactor> transactorList) {
-		int initialSpaceX = 100;
-		int initialSpaceY = 50;
+		int startX = 100;
+		
+		int transactorGapX = 100;
+		int transactorGapY = 50;
 		int transactorWidth = 200;
 		int transactorHeight = 300;
 		int lscWidth = 50;
 		int lscHeight = 50;
+		int lscGapX = 10;
 		
 		if (transactorList != null && !transactorList.isEmpty()) {
 			Stage callModelStage = new Stage();
 			Group group = new Group();
 			for (int i = 0; i < transactorList.size(); i++) {	
 				Transactor transactor = transactorList.get(i);		
-				Rectangle transactorShape = new Rectangle(initialSpaceX + i * 300, initialSpaceY, transactorWidth, transactorHeight);
+				Rectangle transactorShape = new Rectangle(transactorGapX + i * (transactorGapX + transactorWidth), transactorGapY, transactorWidth, transactorHeight);
 				transactorShape.setStroke(Color.YELLOW);
 				transactorShape.setFill(Color.LIGHTGRAY);
 				group.getChildren().add(transactorShape);
 				for (int j = 0; j < transactor.getLscList().size(); j++) {
 					LSC lsc = transactor.getLscList().get(j);
-					Rectangle lscShape = new Rectangle(initialSpaceX + i * (transactorWidth + 100) + (j * 55), transactorHeight + initialSpaceY, lscWidth, lscHeight);
+					Rectangle lscShape = new Rectangle(transactorGapX + i * (transactorGapX + transactorWidth) + j * (lscWidth + lscGapX), transactorHeight + transactorGapY, lscWidth, lscHeight);
 					lscShape.setFill(Color.AQUA);	
 					group.getChildren().add(lscShape);
 				}
+				//drawing incoming and outgoing signals.
 				for (int j = 0; j < transactor.getSipSignals().size(); j++) {
-					double startX = 0;
-					double startY = 0;
-					double endX = 0;
-					double endY = 0;
+					double startLineX = 0;
+					double startLineY = 0;
+					double endLineX = 0;
+					double endLineY = 0;
+					double arrowWidh = 100;
+					double arrowGap = 50;
 					
 					SipSignal sipSignal = transactor.getSipSignals().get(j);
 					if (transactor.getType().equals(Transactor.Type.OCM)) {
-						if (sipSignal.getDirection().equals(SipSignal.Direction.Incoming)) {							
-							startX = i * transactorWidth + 50;
-							startY = (j * 50) + initialSpaceY;
-							endX = i * transactorWidth + 100;
-							endY = (j * 50) + initialSpaceY;
+						if (sipSignal.getDirection().equals(SipSignal.Direction.Incoming)) {
+							startLineX = i * (transactorGapX + transactorWidth);
+							startLineY = (j * arrowGap) + transactorGapY;
+							endLineX = i * (transactorGapX + transactorWidth) + arrowWidh;
+							endLineY = (j * arrowGap) + transactorGapY;
 						} else if (sipSignal.getDirection().equals(SipSignal.Direction.Outgoing)) {
-							startX = i * transactorWidth + 100;
-							startY = (j * 50) + initialSpaceY;
-							endX = i * transactorWidth + 50;
-							endY = (j * 50) + initialSpaceY;
+							startLineX = i * (transactorGapX + transactorWidth) + arrowWidh;
+							startLineY = (j * arrowGap) + transactorGapY;
+							endLineX = i * (transactorGapX + transactorWidth);
+							endLineY = (j * arrowGap) + transactorGapY;
 						}
 					} else if (transactor.getType().equals(Transactor.Type.TCM)) {
 						if (sipSignal.getDirection().equals(SipSignal.Direction.Incoming)) {
-							startX = i * transactorWidth + transactorWidth + transactorWidth  + 100;
-							startY = (j * 50) + initialSpaceY;
-							endX = i * transactorWidth + transactorWidth + transactorWidth 
-									+ transactorWidth;
-							endY = (j * 50) + initialSpaceY;
+							startLineX = transactorWidth + arrowWidh + i * (transactorGapX + transactorWidth);
+							startLineY = (j * arrowGap) + transactorGapY;
+							endLineX = transactorWidth + arrowWidh + i * (transactorGapX + transactorWidth) + arrowWidh;
+							endLineY = (j * arrowGap) + transactorGapY;
+
 						} else if (sipSignal.getDirection().equals(SipSignal.Direction.Outgoing)) {
-							startX = i * transactorWidth + transactorWidth + transactorWidth 
-									+ transactorWidth;
-							startY = (j * 50) + initialSpaceY;
-							endX = i * transactorWidth + transactorWidth + transactorWidth  + 100;
-							endY = (j * 50) + initialSpaceY;
+							startLineX = transactorWidth + arrowWidh + i * (transactorGapX + transactorWidth)
+									+ arrowWidh;
+							startLineY = (j * arrowGap) + transactorGapY;
+							endLineX = transactorWidth + arrowWidh + i * (transactorGapX + transactorWidth);
+							endLineY = (j * arrowGap) + transactorGapY;
 						}
 					}
-					drawArrowLine(startX, startY, endX, endY, group);
+					drawArrowLine(startLineX, startLineY, endLineX, endLineY, group);
 				}
 			}
 			Scene scene = new Scene(group, 1920, 1080);
