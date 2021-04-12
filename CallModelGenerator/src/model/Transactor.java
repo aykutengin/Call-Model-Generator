@@ -22,8 +22,6 @@ public class Transactor {
 	private List<Handler> handlerList = new ArrayList<Handler>();
 	private List<LSC> lscList = new ArrayList<LSC>();
 	private List<List<Integer>> workingLines = new ArrayList<>();
-	//private List<Signal> incomingSignals = new ArrayList<Signal>();
-	//private List<Signal> outgoingSignals = new ArrayList<Signal>();
 	private List<SipSignal> sipSignals = new ArrayList<SipSignal>();
 	private List<Signal> transactorSignal = new ArrayList<Signal>();
 
@@ -90,22 +88,6 @@ public class Transactor {
 	public void setWorkingLines(List<List<Integer>> workingLines) {
 		this.workingLines = workingLines;
 	}
-
-	/*public List<Signal> getIncomingSignals() {
-		return incomingSignals;
-	}
-
-	public void setIncomingSignals(List<Signal> incomingSignals) {
-		this.incomingSignals = incomingSignals;
-	}
-
-	public List<Signal> getOutgoingSignals() {
-		return outgoingSignals;
-	}
-
-	public void setOutgoingSignals(List<Signal> outgoingSignals) {
-		this.outgoingSignals = outgoingSignals;
-	}*/
 
 	public List<Signal> getTransactorSignal() {
 		return transactorSignal;
