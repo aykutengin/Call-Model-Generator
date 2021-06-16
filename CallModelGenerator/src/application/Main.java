@@ -1,7 +1,6 @@
 package application;
 
 import java.io.File;
-import java.util.Iterator;
 import java.util.List;
 
 import javafx.application.Application;
@@ -9,7 +8,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import model.LSC;
 import model.Signal;
-import model.SipSignal;
+import model.SIPMessageTrace;
 import model.Transactor;
 import utility.Log;
 import javafx.scene.Group;
@@ -19,7 +18,6 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
-import javafx.scene.layout.Pane;
 import javafx.scene.shape.Line;
 
 public class Main extends Application {
@@ -34,7 +32,7 @@ public class Main extends Application {
 			button.setOnAction(e -> {
 				File selectedFile = fileChooser.showOpenDialog(primaryStage);
 				List<Transactor> transactorList = log.readLog(selectedFile.getAbsolutePath());				
-				DrawCallModel(transactorList);
+				//DrawCallModel(transactorList);
 			});
 			root.setCenter(button);
 			Scene scene = new Scene(root, 400, 400);
@@ -68,14 +66,50 @@ public class Main extends Application {
 		int lscHeight = 50;
 		int lscGapX = 10;
 		
+		int startXOCM;
+		int startXCM;
+		
+		int ocmCount = 1;
+		int cmCount = 0;
+		int tcmCount = 1;
+		
 		if (transactorList != null && !transactorList.isEmpty()) {
 			Stage callModelStage = new Stage();
 			Group group = new Group();
 			for (int i = 0; i < transactorList.size(); i++) {	
-				Transactor transactor = transactorList.get(i);		
-				Rectangle transactorShape = new Rectangle(transactorGapX + i * (transactorGapX + transactorWidth), transactorGapY, transactorWidth, transactorHeight);
-				transactorShape.setStroke(Color.YELLOW);
-				transactorShape.setFill(Color.LIGHTGRAY);
+				Transactor transactor = transactorList.get(i);
+				
+				Rectangle transactorShape = null;
+				if (transactor.getType().equals(Transactor.Type.OCM)) {
+					transactorShape = new Rectangle(transactorGapX + i * (transactorGapX + transactorWidth), transactorGapY, transactorWidth, transactorHeight);
+					ocmCount += 1;
+				} else if (transactor.getType().equals(Transactor.Type.CM)) {
+					transactorShape = new Rectangle(transactorGapX + i * (transactorGapX + transactorWidth), (cmCount * transactorHeight) + transactorGapY, transactorWidth, transactorHeight);
+					cmCount += 1;
+				} else if (transactor.getType().equals(Transactor.Type.TCM)) {
+					transactorShape = new Rectangle(transactorGapX + i * (transactorGapX + transactorWidth), transactorGapY, transactorWidth, transactorHeight);
+					tcmCount += 1;
+
+				}
+				
+				//Rectangle transactorShape = new Rectangle(transactorGapX + i * (transactorGapX + transactorWidth), transactorGapY, transactorWidth, transactorHeight);
+
+				switch (transactor.getType()) {
+				case OCM:
+					transactorShape.setFill(Color.RED);
+					break;
+				case CM:
+					transactorShape.setFill(Color.GREEN);
+					break;
+				case TCM:
+					transactorShape.setFill(Color.GOLD);
+					break;
+				default:
+					//transactorShape.setStroke(Color.YELLOW);
+					transactorShape.setFill(Color.LIGHTGRAY);
+					break;
+				}
+				
 				group.getChildren().add(transactorShape);
 				for (int j = 0; j < transactor.getLscList().size(); j++) {
 					LSC lsc = transactor.getLscList().get(j);
@@ -92,27 +126,27 @@ public class Main extends Application {
 					double arrowWidh = 100;
 					double arrowGap = 50;
 					
-					SipSignal sipSignal = transactor.getSipSignals().get(j);
+					SIPMessageTrace sipSignal = transactor.getSipSignals().get(j);
 					if (transactor.getType().equals(Transactor.Type.OCM)) {
-						if (sipSignal.getDirection().equals(SipSignal.Direction.Incoming)) {
+						if (sipSignal.getDirection().equals(SIPMessageTrace.Direction.Incoming)) {
 							startLineX = i * (transactorGapX + transactorWidth);
 							startLineY = (j * arrowGap) + transactorGapY;
 							endLineX = i * (transactorGapX + transactorWidth) + arrowWidh;
 							endLineY = (j * arrowGap) + transactorGapY;
-						} else if (sipSignal.getDirection().equals(SipSignal.Direction.Outgoing)) {
+						} else if (sipSignal.getDirection().equals(SIPMessageTrace.Direction.Outgoing)) {
 							startLineX = i * (transactorGapX + transactorWidth) + arrowWidh;
 							startLineY = (j * arrowGap) + transactorGapY;
 							endLineX = i * (transactorGapX + transactorWidth);
 							endLineY = (j * arrowGap) + transactorGapY;
 						}
 					} else if (transactor.getType().equals(Transactor.Type.TCM)) {
-						if (sipSignal.getDirection().equals(SipSignal.Direction.Incoming)) {
+						if (sipSignal.getDirection().equals(SIPMessageTrace.Direction.Incoming)) {
 							startLineX = transactorWidth + arrowWidh + i * (transactorGapX + transactorWidth);
 							startLineY = (j * arrowGap) + transactorGapY;
 							endLineX = transactorWidth + arrowWidh + i * (transactorGapX + transactorWidth) + arrowWidh;
 							endLineY = (j * arrowGap) + transactorGapY;
 
-						} else if (sipSignal.getDirection().equals(SipSignal.Direction.Outgoing)) {
+						} else if (sipSignal.getDirection().equals(SIPMessageTrace.Direction.Outgoing)) {
 							startLineX = transactorWidth + arrowWidh + i * (transactorGapX + transactorWidth)
 									+ arrowWidh;
 							startLineY = (j * arrowGap) + transactorGapY;
@@ -122,6 +156,18 @@ public class Main extends Application {
 					}
 					drawArrowLine(startLineX, startLineY, endLineX, endLineY, group);
 				}
+				
+				//drawing transactor signals.
+				for (int j = 0; j < transactor.getTransactorSignal().size(); j++) {
+					if (transactor.getType().equals(Transactor.Type.OCM)) {
+						
+					} else if (transactor.getType().equals(Transactor.Type.CM)) {
+
+					} else if (transactor.getType().equals(Transactor.Type.TCM)) {
+
+					}
+				}
+				
 			}
 			Scene scene = new Scene(group, 1920, 1080);
 			callModelStage.setTitle("Call Model");
@@ -130,31 +176,51 @@ public class Main extends Application {
 		}
 	}
 	
-	public static void drawArrowLine(double startX, double startY, double endX, double endY, Group group) {
-	      // get the slope of the line and find its angle
-	      double slope = (startY - endY) / (startX - endX);
-	      double lineAngle = Math.atan(slope);
+	/**
+	 * Draws inter transactor signals. */
+	/*private void interTransactorSignal(Transactor transactor) {
+		List<Signal> signals = transactor.getTransactorSignal();
+		for (Signal signal : signals) {
+			if (transactor.getType().equals(Transactor.Type.OCM)) {
+				if(signal.getLsc().getType().equals(LSC.Type.SipBBUALSC)) {
+					
+				}
+				else if(signal.getLsc().getType().equals(LSC.Type.IWIPTelLSC)){
+					
+				}
+			} else if (transactor.getType().equals(Transactor.Type.CM)) {
 
-	      double arrowAngle = startX > endX ? Math.toRadians(45) : -Math.toRadians(225);
+			} else if (transactor.getType().equals(Transactor.Type.TCM)) {
 
-	      Line line = new Line(startX, startY, endX, endY);
+			}
+		}
+	}*/
+	
+	private static void drawArrowLine(double startX, double startY, double endX, double endY, Group group) {
+		// get the slope of the line and find its angle
+		double slope = (startY - endY) / (startX - endX);
+		double lineAngle = Math.atan(slope);
 
-	      double lineLength = Math.sqrt(Math.pow(startX - endX, 2) + Math.pow(startY - endY, 2));
-	      double arrowLength = lineLength / 10;
+		double arrowAngle = startX > endX ? Math.toRadians(45) : -Math.toRadians(225);
 
-	      // create the arrow legs
-	      Line arrow1 = new Line();
-	      arrow1.setStartX(line.getEndX());
-	      arrow1.setStartY(line.getEndY());
-	      arrow1.setEndX(line.getEndX() + arrowLength * Math.cos(lineAngle - arrowAngle));
-	      arrow1.setEndY(line.getEndY() + arrowLength * Math.sin(lineAngle - arrowAngle));
+		Line line = new Line(startX, startY, endX, endY);
 
-	      Line arrow2 = new Line();
-	      arrow2.setStartX(line.getEndX());
-	      arrow2.setStartY(line.getEndY());
-	      arrow2.setEndX(line.getEndX() + arrowLength * Math.cos(lineAngle + arrowAngle));
-	      arrow2.setEndY(line.getEndY() + arrowLength * Math.sin(lineAngle + arrowAngle));
+		double lineLength = Math.sqrt(Math.pow(startX - endX, 2) + Math.pow(startY - endY, 2));
+		double arrowLength = lineLength / 10;
 
-	      group.getChildren().addAll(line, arrow1, arrow2);
-	   }
+		// create the arrow legs
+		Line arrow1 = new Line();
+		arrow1.setStartX(line.getEndX());
+		arrow1.setStartY(line.getEndY());
+		arrow1.setEndX(line.getEndX() + arrowLength * Math.cos(lineAngle - arrowAngle));
+		arrow1.setEndY(line.getEndY() + arrowLength * Math.sin(lineAngle - arrowAngle));
+
+		Line arrow2 = new Line();
+		arrow2.setStartX(line.getEndX());
+		arrow2.setStartY(line.getEndY());
+		arrow2.setEndX(line.getEndX() + arrowLength * Math.cos(lineAngle + arrowAngle));
+		arrow2.setEndY(line.getEndY() + arrowLength * Math.sin(lineAngle + arrowAngle));
+
+		group.getChildren().addAll(line, arrow1, arrow2);
+	}
 }

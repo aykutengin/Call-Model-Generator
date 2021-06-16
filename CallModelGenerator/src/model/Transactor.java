@@ -22,8 +22,13 @@ public class Transactor {
 	private List<Handler> handlerList = new ArrayList<Handler>();
 	private List<LSC> lscList = new ArrayList<LSC>();
 	private List<List<Integer>> workingLines = new ArrayList<>();
-	private List<SipSignal> sipSignals = new ArrayList<SipSignal>();
+	private List<SIPMessageTrace> sipSignals = new ArrayList<SIPMessageTrace>();
 	private List<Signal> transactorSignal = new ArrayList<Signal>();
+	
+	private List<ProcessIncomingSignal> processIncomingSignalList = new ArrayList<ProcessIncomingSignal>();
+	private List<IncomingIWSignal> incomingIWSignal = new ArrayList<IncomingIWSignal>();
+	
+	private boolean leafTCM;
 
 	public Transactor(int id) {
 		this.id = id;
@@ -93,11 +98,11 @@ public class Transactor {
 		return transactorSignal;
 	}
 
-	public List<SipSignal> getSipSignals() {
+	public List<SIPMessageTrace> getSipSignals() {
 		return sipSignals;
 	}
 
-	public void setSipSignals(List<SipSignal> sipSignals) {
+	public void setSipSignals(List<SIPMessageTrace> sipSignals) {
 		this.sipSignals = sipSignals;
 	}
 
@@ -107,7 +112,34 @@ public class Transactor {
 
 	@Override
 	public String toString() {
-		return "Transactor [initiatedServices=" + initiatedServices + "]";
+		return "Transactor [id=" + id + ", type=" + type + ", initiatedServices=" + initiatedServices + ", handlerList="
+				+ handlerList + ", lscList=" + lscList + ", workingLines=" + workingLines + ", sipSignals=" + sipSignals
+				+ ", transactorSignal=" + transactorSignal + ", processIncomingSignalList=" + processIncomingSignalList
+				+ ", incomingIWSignal=" + incomingIWSignal + ", leafTCM=" + leafTCM + "]";
+	}
+	
+	public List<ProcessIncomingSignal> getProcessIncomingSignalList() {
+		return processIncomingSignalList;
+	}
+
+	public void setProcessIncomingSignalList(List<ProcessIncomingSignal> processIncomingSignalList) {
+		this.processIncomingSignalList = processIncomingSignalList;
+	}
+
+	public List<IncomingIWSignal> getIncomingIWSignal() {
+		return incomingIWSignal;
+	}
+
+	public void setIncomingIWSignal(List<IncomingIWSignal> incomingIWSignal) {
+		this.incomingIWSignal = incomingIWSignal;
+	}
+
+	public boolean isLeafTCM() {
+		return leafTCM;
+	}
+
+	public void setLeafTCM(boolean leafTCM) {
+		this.leafTCM = leafTCM;
 	}
 
 }

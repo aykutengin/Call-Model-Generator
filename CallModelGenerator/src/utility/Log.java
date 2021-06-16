@@ -11,11 +11,15 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import model.ContextApp;
 import model.Handler;
+import model.IncomingIWSignal;
 import model.LSC;
+import model.ProcessIncomingSignal;
 import model.Signal;
-import model.SipSignal;
+import model.SIPMessageTrace;
 import model.Transactor;
+import model.UnifiedSIPMessageTrace;
 
 public class Log {
 	private final static String PROCESS = "Transactor PROCESS :";
@@ -28,30 +32,38 @@ public class Log {
 	private final static String PROCESSEVENT = "ASE ProcessEvent :";
 	private final static String CAT_ROOT = "[CAT : ROOT]";
 
-	static List<Transactor> transactorList;
+	//static List<Transactor> contextApp.getTransactorList();
+	private ContextApp contextApp;
+	
+	
 
 	/*
 	 * public static void main(String[] args) { Main m = new Main();
 	 * m.readLog("pbx2pbx.log");
 	 * 
-	 * Scriber s = new Scriber(); s.drawCallModel(transactorList); }
+	 * Scriber s = new Scriber(); s.drawCallModel(contextApp.getTransactorList()); }
 	 */
 
-	public List<Transactor> readLog(String fileName) {	
+	/**
+	 * Analyze the log file and creates objects.
+	 * */
+	public List<Transactor> readLog(String fileName) {
 		int line = 1;
 		boolean processDetected = false;
 		boolean suspendDetected = false;
 		boolean idleDetected = false;
 		boolean swapDetected = false;
 		boolean svcTraceDetected = false;
-		boolean outgoingSignalDetected = false;
-		boolean incomingSignalDetected = false;
-		
-		Transactor currentTransactor = null;
-		transactorList = new ArrayList<Transactor>();
-		SipSignal tempIncomingSignal = null;
-		List<SipSignal> tempIncomingSignals = new ArrayList<SipSignal>();
+		boolean processIncomingSignalDetected = false;
+		boolean incomingIWSignalDetected = false;
+		boolean outgoingSIPMessageTraceDetected = false;
+		boolean incomingSIPMessageTraceDetected = false;
 
+		contextApp = ContextApp.getInstance();
+		Transactor currentTransactor = null;
+		SIPMessageTrace tempIncomingSignal = null;
+		List<SIPMessageTrace> tempIncomingSignals = new ArrayList<SIPMessageTrace>();
+		
 		try {
 			FileInputStream fstream = new FileInputStream(fileName);
 			BufferedReader br = new BufferedReader(new InputStreamReader(fstream));
@@ -61,7 +73,7 @@ public class Log {
 				// start of the transactor works
 				if (strLine.contains(PROCESS)) {
 					processDetected = true;
-					
+
 					int id = findFirstNumber(strLine);
 					currentTransactor = getTransactorByID(id);
 					if (currentTransactor == null) {
@@ -70,21 +82,19 @@ public class Log {
 							currentTransactor.getSipSignals().add(tempIncomingSignal);
 							tempIncomingSignal = null;
 						}
-						transactorList.add(currentTransactor);
+						contextApp.getTransactorList().add(currentTransactor);
 					}
 					currentTransactor.setLastlyUsedTransactorId(id);
 					currentTransactor.getWorkingLines().add(Arrays.asList(line, 0));
-					
+
 					if (!tempIncomingSignals.isEmpty()) {
-						for (SipSignal signal : tempIncomingSignals) {
+						for (SIPMessageTrace signal : tempIncomingSignals) {
 							if (!currentTransactor.getSipSignals().contains(signal)) {
 								currentTransactor.getSipSignals().add(signal);
 							}
 						}
-						
-						tempIncomingSignals = new ArrayList<SipSignal>(); 
+						tempIncomingSignals = new ArrayList<SIPMessageTrace>();
 					}
-
 				} else if (strLine.contains(SUSPEND)) {
 					suspendDetected = true;
 
@@ -93,7 +103,6 @@ public class Log {
 
 				} else if (strLine.contains(SWAP)) {
 					swapDetected = true;
-
 				}
 
 				if (processDetected && strLine.contains(PROCESSEVENT) && strLine.contains(CAT_ROOT)) {
@@ -110,13 +119,11 @@ public class Log {
 				} else if (suspendDetected) {
 					int lastIndex = currentTransactor.getWorkingLines().size() - 1;
 					currentTransactor.getWorkingLines().get(lastIndex).set(1, line);
-					//currentTransactor = null;
+					// currentTransactor = null;
 					suspendDetected = false;
 				} else if (swapDetected) {
-					/*
-					 * int lastIndex = runningTransactor.getWorkingLines().size() - 1;
-					 * runningTransactor.getWorkingLines().get(lastIndex).set(1, line);
-					 */
+					int lastIndex = currentTransactor.getWorkingLines().size() - 1;
+					currentTransactor.getWorkingLines().get(lastIndex).set(1, line);
 					swapDetected = false;
 				} else if (idleDetected) {
 					int lastIndex = currentTransactor.getWorkingLines().size() - 1;
@@ -184,92 +191,172 @@ public class Log {
 				if (strLine.contains(LSC.SUSPEND)) {
 					LSC lsc = findLSCFromstrLine(strLine);
 					// Checking to prevent duplicate data.
-					//suspendedLSC.add(lsc);	
-					//suspendedTransactor.getLscList().add(findLSCFromstrLine(strLine));
 					if (!currentTransactor.getLscList().contains(lsc)) {
 						currentTransactor.getLscList().add(findLSCFromstrLine(strLine));
 					}
 				}
 				// end of the LSC works
-				
-				// Finding processed signal in transactor.
-				if (strLine.contains(Signal.MESSAGE)) {
-					Signal signal = new Signal();
-					String s = parseString(strLine, Signal.MESSAGE);
-					String[] splittedStr = s.split(" ");
 
-					signal.setId(Integer.parseInt(splittedStr[1]));
-
-					// Parsing the type partition.
-					int lastIndex = splittedStr.length - 1;
-					if (splittedStr[lastIndex].contains("]")) {
-						String[] secondPart = splittedStr[lastIndex].split("\\]");
-						signal.setName(parseSignalName(secondPart[1]));
-						signal.setType(secondPart[0].replace("[", ""));
-						signal.setTransaction(Integer.parseInt(secondPart[secondPart.length - 1].replace("[", "")));
-					}
-					currentTransactor.getTransactorSignal().add(signal);
+				// Finding ProcessIncomingSignal.
+				if (strLine.contains(ProcessIncomingSignal.PROCESSINCOMINGSIGNAL)) {
+					processIncomingSignalDetected = true;
 				}
-				 
+
+				if (processIncomingSignalDetected) {
+					if(strLine.contains(ProcessIncomingSignal.MESSAGE)) {
+						ProcessIncomingSignal processIncomingSignal = new ProcessIncomingSignal();
+						String s = parseString(strLine, ProcessIncomingSignal.MESSAGE);
+						String[] splittedStr = s.split(" ");
+
+						processIncomingSignal.setId(Integer.parseInt(splittedStr[1]));
+
+						// Parsing the type partition.
+						int lastIndex = splittedStr.length - 1;
+						if (splittedStr[lastIndex].contains("]")) {
+							String[] secondPart = splittedStr[lastIndex].split("\\]");
+							processIncomingSignal.setName(parseSignalName(secondPart[1]));
+							processIncomingSignal.setType(secondPart[0].replace("[", ""));
+							processIncomingSignal
+									.setTransaction(Integer.parseInt(secondPart[secondPart.length - 1].replace("[", "")));
+						}
+						// currentTransactor.getTransactorSignal().add(signal);
+						currentTransactor.getProcessIncomingSignalList().add(processIncomingSignal);
+					}
+					else if(strLine.contains(Signal.TRANSACTORSIGNAL_CALLID)) {
+						int lastIndex = currentTransactor.getProcessIncomingSignalList().size() - 1;
+						ProcessIncomingSignal processIncomingSignal = currentTransactor.getProcessIncomingSignalList().get(lastIndex);
+						processIncomingSignal.setCallId(parseString(strLine, Signal.TRANSACTORSIGNAL_CALLID, CLOSESQUAREBRACKET));
+					}
+					else if (strLine.contains(LSC.LSC)) {
+						LSC lsc = findLSCFromstrLine(strLine);
+						int lastIndex = currentTransactor.getProcessIncomingSignalList().size() - 1;
+						ProcessIncomingSignal processIncomingSignal = currentTransactor.getProcessIncomingSignalList()
+								.get(lastIndex);
+						processIncomingSignal.setLsc(lsc);
+						processIncomingSignalDetected = false;
+					}
+					
+				}
+				// End of ProcessIncomingSignal.
+
+				// Finding Incoming IW Signal.
+				if (strLine.contains(IncomingIWSignal.INCOMINGIWSIGNAL)) {
+					incomingIWSignalDetected = true;
+				}
+
+				if (incomingIWSignalDetected) {
+					if (strLine.contains(IncomingIWSignal.SIGNAL)) {
+						IncomingIWSignal incomingIWSignal = new IncomingIWSignal();
+						String s = parseString(strLine, IncomingIWSignal.SIGNAL);
+						String[] splittedStr = s.split(" ");
+
+						incomingIWSignal.setId(Integer.parseInt(splittedStr[1]));
+
+						// Parsing the type partition.
+						int lastIndex = splittedStr.length - 1;
+						if (splittedStr[lastIndex].contains("]")) {
+							String[] secondPart = splittedStr[lastIndex].split("\\]");
+							incomingIWSignal.setName(parseSignalName(secondPart[1]));
+							incomingIWSignal.setType(secondPart[0].replace("[", ""));
+							incomingIWSignal.setTransaction(
+									Integer.parseInt(secondPart[secondPart.length - 1].replace("[", "")));
+						}
+						currentTransactor.getIncomingIWSignal().add(incomingIWSignal);
+					}
+					else if(strLine.contains(Signal.TRANSACTORSIGNAL_CALLID)) {
+						int lastIndex = currentTransactor.getIncomingIWSignal().size() - 1;
+						IncomingIWSignal incomingIWSignal = currentTransactor.getIncomingIWSignal().get(lastIndex);
+						incomingIWSignal.setCallId(parseString(strLine, Signal.TRANSACTORSIGNAL_CALLID, CLOSESQUAREBRACKET));
+					}
+					else if (strLine.contains(LSC.LSC)) {
+						LSC lsc = findLSCFromstrLine(strLine);
+						int lastIndex = currentTransactor.getIncomingIWSignal().size() - 1;
+						IncomingIWSignal incomingIWSignal = currentTransactor.getIncomingIWSignal().get(lastIndex);
+						incomingIWSignal.setLsc(lsc);
+						incomingIWSignalDetected = false;
+					}
+				}
+				// End of Incoming IW Signal.
 
 				// Finding incoming signal from transactor.
-				if (strLine.contains(SipSignal.INCOMING)) {
-					incomingSignalDetected = true;
+				if (strLine.contains(SIPMessageTrace.INCOMING)) {
+					incomingSIPMessageTraceDetected = true;
 				}
 				// Finding outgoing signal from transactor.
-				if (strLine.contains(SipSignal.OUTGOING)) {
-					outgoingSignalDetected = true;
+				if (strLine.contains(SIPMessageTrace.OUTGOING)) {
+					outgoingSIPMessageTraceDetected = true;
+					//currentTransactor.setLeafTCM(true);
 				}
-				if ((incomingSignalDetected || outgoingSignalDetected) && strLine.contains("SIP_CB")) {
-					//If there is any incoming and outgoing signal that means transactor suspended here. Because when the transactor is processing we should not see any signal. it happens after the work is done.
-					
-					
-					SipSignal sipSignal = new SipSignal();
-					String s = parseString(strLine, "|");
-					sipSignal.setId(Integer.parseInt(parseString(s, " ")));
-					//signal.setName(parseString(s, "SIP_", "_"));
-					sipSignal.setName(parseSignalName(s));
-					
-					if (incomingSignalDetected) {
-						sipSignal.setDirection(SipSignal.Direction.Incoming);
-						tempIncomingSignals.add(sipSignal);
-						incomingSignalDetected = false;
+				if ((incomingSIPMessageTraceDetected || outgoingSIPMessageTraceDetected) && strLine.contains("SIP_CB")) {
+					// If there is any incoming and outgoing signal that means transactor suspended
+					// here. Because when the transactor is processing we should not see any signal.
+					// it happens after the work is done.
 
-					} else if (outgoingSignalDetected) {
-						sipSignal.setDirection(SipSignal.Direction.Outgoing);
-						Transactor lastUsedTransactor = getTransactorByID(currentTransactor.getId());		
-						//lastUsedTransactor.getOutgoingSignals().add(signal);
-						lastUsedTransactor.getSipSignals().add(sipSignal);
-						outgoingSignalDetected = false;
+					//There is not any cseq for SipSignalAnswer. Therefore its skipped.
+					if (strLine.contains("SipSignalAnswer")) {
+						incomingSIPMessageTraceDetected = false;
+						line++;
+						continue;
+					}
+					
+					SIPMessageTrace sipMessageTrace = new SIPMessageTrace();
+					String s = parseString(strLine, "|");
+					sipMessageTrace.setId(Integer.parseInt(parseString(s, " ")));
+					// signal.setName(parseString(s, "SIP_", "_"));
+					sipMessageTrace.setName(parseSignalName(s));
+					sipMessageTrace.setType(parseTypeofSIPMessage(s));
+					sipMessageTrace.setLine(line);
+					if (incomingSIPMessageTraceDetected) {
+						sipMessageTrace.setDirection(SIPMessageTrace.Direction.Incoming);
+						tempIncomingSignals.add(sipMessageTrace);		
+						contextApp.getSipMessageTraceList().add(sipMessageTrace);			
+					} else if (outgoingSIPMessageTraceDetected) {
+						sipMessageTrace.setDirection(SIPMessageTrace.Direction.Outgoing);
+						Transactor lastUsedTransactor = getTransactorByID(currentTransactor.getId());
+						lastUsedTransactor.getSipSignals().add(sipMessageTrace);						
+						contextApp.getSipMessageTraceList().add(sipMessageTrace);
 					}
 				}
-
+				if ((incomingSIPMessageTraceDetected || outgoingSIPMessageTraceDetected) && (strLine.contains(Signal.CSEQ) || strLine.contains(Signal.SMT_CALLID))) {
+					int lastIndex = contextApp.getSipMessageTraceList().size() - 1;
+					SIPMessageTrace sipMessageTrace = contextApp.getSipMessageTraceList().get(lastIndex);
+					if (strLine.contains(Signal.CSEQ)) {
+						sipMessageTrace.setTransaction(findFirstNumber(strLine));
+					} else if (strLine.contains(Signal.SMT_CALLID)) {
+						sipMessageTrace.setCallId(parseString(strLine, "Call-ID: "));
+						if (incomingSIPMessageTraceDetected) {
+							incomingSIPMessageTraceDetected = false;
+						} else if (outgoingSIPMessageTraceDetected) {
+							outgoingSIPMessageTraceDetected = false;
+						}
+					}
+				}
 				line++;
 			}
 			fstream.close();
 
 			/*
-			 * for (Transactor transactor : transactorList) {
-			 * System.out.println(transactor); }
-			 */
-
-			/*
 			 * try (PrintWriter out = new PrintWriter("output.txt")) { for (Transactor
-			 * transactor : transactorList) { out.println(transactor); } }
+			 * transactor : contextApp.getTransactorList()) { out.println(transactor); } }
 			 */
 
 		} catch (Exception e) {
 			System.err.println("Error: " + e.getMessage());
-			//e.printStackTrace();
+			e.printStackTrace();
+
 		}
-		return transactorList;
+		//signalPath(contextApp.getTransactorList(), sipMessageTraceList);
+		createReport(contextApp);
+		return contextApp.getTransactorList();
 	}
 
 	/**
 	 * Returns the first number of the given line.
 	 */
 	private int findFirstNumber(String strLine) {
-		Pattern p = Pattern.compile("([0-9])\\w+");
+		//Pattern p = Pattern.compile("([0-9])\\w+");
+		Pattern p = Pattern.compile("-?\\d+");
+		
 		Matcher m = p.matcher(strLine);
 		while (m.find()) {
 			return Integer.parseInt(m.group());
@@ -301,7 +388,7 @@ public class Log {
 	 * Returns transactor by id from the list.
 	 */
 	private Transactor getTransactorByID(int id) {
-		for (Transactor transactor : transactorList) {
+		for (Transactor transactor : contextApp.getTransactorList()) {
 			if (transactor.getId() == id) {
 				return transactor;
 			}
@@ -355,6 +442,7 @@ public class Log {
 		int begin = str.indexOf(from);
 		begin += from.length();
 		int end = str.indexOf(to, begin);
+		str.indexOf("@");
 		return str.substring(begin, end).trim();
 
 	}
@@ -381,10 +469,19 @@ public class Log {
 		return null;
 	}
 
+	private String parseTypeofSIPMessage(String str) {
+		if(str.contains(Signal.REQUEST)) {
+			return Signal.REQUEST;
+		}else if(str.contains(Signal.RESPONSE)){
+			return Signal.RESPONSE;
+		}
+		return null;
+	}
+	
 	private void callModelHelper() {
 		try (PrintWriter out = new PrintWriter("output.txt")) {
-			if (transactorList != null) {
-				for (Transactor transactor : transactorList) {
+			if (contextApp.getTransactorList() != null) {
+				for (Transactor transactor : contextApp.getTransactorList()) {
 					out.println(transactor.getType() + " " + transactor.getId());
 					for (String svc : transactor.getInitiatedServices()) {
 						out.println("\t" + svc);
@@ -395,12 +492,12 @@ public class Log {
 			e.printStackTrace();
 		}
 	}
-	
+
 	/**
 	 * Returns id of the transactor which has the given signal.
-	 * */
+	 */
 	private int searchSignal(Signal signal) {
-		for (Transactor transactor : transactorList) {
+		for (Transactor transactor : contextApp.getTransactorList()) {
 			for (Handler handler : transactor.getHandlerList()) {
 				if (handler.getSignal().getName() == signal.getName()
 						&& handler.getSignal().getType() == signal.getType()
@@ -411,5 +508,91 @@ public class Log {
 		}
 		return 0;
 	}
+	/**
+	 * Finds the which signal passes over which transactors.
+	 * */
+	private void signalPath(List<Transactor> transactors, List<SIPMessageTrace> sipMessageTraces) {
+		/*for (Transactor transactor : transactors) {
+			System.out.println(transactor.getType() + " - " + transactor.getWorkingLines());
+		}
+		for (SIPMessageTrace sipMessageTrace : sipMessageTraces) {
+			System.out.println(sipMessageTrace);
+		}*/
+		
+		List<UnifiedSIPMessageTrace> unifiedSIPMessageTraceList = mergeSignals(sipMessageTraces);		
+		for (UnifiedSIPMessageTrace unifiedSIPMessageTrace : unifiedSIPMessageTraceList) {
+			//System.out.println(sipMessageTrace);
+			
+			System.out.println("\n" + unifiedSIPMessageTrace.getName() + " - In: " + unifiedSIPMessageTrace.getIncomingLine() + " - Out: " + unifiedSIPMessageTrace.getOutgoingLine());
+			for (Transactor transactor : contextApp.getTransactorList()) {
+				System.out.println(transactor.getType() + " - " + transactor.getWorkingLines());
+			}
+		}
+		
+		
+	}
 	
+	/**
+	 * Merges the incoming and outgoing signals.
+	 */
+	private List<UnifiedSIPMessageTrace> mergeSignals(List<SIPMessageTrace> sipMessageTraces) {
+		List<UnifiedSIPMessageTrace> unifiedSIPMessageTraceList = new ArrayList<UnifiedSIPMessageTrace>();
+		for (SIPMessageTrace sipMessageTrace : sipMessageTraces) {
+			UnifiedSIPMessageTrace unifiedSIPMessageTrace = new UnifiedSIPMessageTrace();
+			unifiedSIPMessageTrace.setSIPMessageTrace(sipMessageTrace);
+			if (unifiedSIPMessageTrace.getDirection() == SIPMessageTrace.Direction.Incoming) {
+				unifiedSIPMessageTrace.setIncomingLine(unifiedSIPMessageTrace.getLine());
+			} else if (unifiedSIPMessageTrace.getDirection() == SIPMessageTrace.Direction.Outgoing) {
+				//unifiedSIPMessageTrace.setOutgoingLine(unifiedSIPMessageTrace.getLine());
+			}
+			if (unifiedSIPMessageTraceList.contains(unifiedSIPMessageTrace)) {
+				int index = unifiedSIPMessageTraceList.indexOf(unifiedSIPMessageTrace);
+				unifiedSIPMessageTraceList.get(index).setOutgoingLine(unifiedSIPMessageTrace.getLine());
+			} else {
+				unifiedSIPMessageTraceList.add(unifiedSIPMessageTrace);
+			}
+		}
+		return unifiedSIPMessageTraceList;
+	}
+	
+	private void createReport(ContextApp context) {
+		/*for (Transactor transactor : context.getTransactorList()) {
+			System.out.println(transactor.getType() + " - " + transactor.getId());
+			for (ProcessIncomingSignal incomingSig : transactor.getProcessIncomingSignalList()) {
+				System.out.println("\t" + incomingSig.getName() + "(Incoming) - " + incomingSig.getId() + " - " + incomingSig.getCallId());
+			}
+			System.out.println("------------------------------------------------");
+			for (IncomingIWSignal outgoingSig : transactor.getIncomingIWSignal()) {
+				System.out.println("\t" + outgoingSig.getName() + "(Outgoing) - " + outgoingSig.getId() + " - " + outgoingSig.getCallId());
+			}
+		}
+		System.out.println("\n-------------SipMessages-------------");
+		for (SIPMessageTrace sipMessages : context.getSipMessageTraceList()) {
+			System.out
+					.println(sipMessages.getName() + " - " + sipMessages.getId() + " - " + sipMessages.getDirection() + " - " + sipMessages.getCallId());
+		}*/
+		
+		/*for (Transactor transactor : context.getTransactorList()) {
+			for (ProcessIncomingSignal incomingSig : transactor.getProcessIncomingSignalList()) {
+				for (IncomingIWSignal outgoingSig : transactor.getIncomingIWSignal()) {
+					if (incomingSig.equals(outgoingSig)) {
+
+					}
+				}
+			}
+		}*/
+		
+		for (SIPMessageTrace sipMsgTrace : context.getSipMessageTraceList()) {
+			System.out.println(sipMsgTrace.getName());
+			for (Transactor transactor : context.getTransactorList()) {
+				for (ProcessIncomingSignal processIncSig : transactor.getProcessIncomingSignalList()) {
+					if (sipMsgTrace.equals(processIncSig)) {
+						System.out.println(transactor.getType());
+					}
+				}
+			}
+		}
+		
+		
+	}
 }

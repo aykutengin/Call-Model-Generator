@@ -1,6 +1,7 @@
 package model;
 
 public class LSC {
+	public final static String LSC = "[LSC: ";
 	public final static String SUSPEND = "LSC Suspend :";
 	public final static String PORT = "[PORT:";
 
