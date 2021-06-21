@@ -8,7 +8,7 @@ public class Handler {
 	public final static String SVC_TRACE = "[SVC TRACE : ";
 	public final static String EDRC_RC = "[EDRC  : RC: ";
 
-	public enum ReturnCodes {
+	public enum ReturnCode {
 		INITIATE, CONTINUE, PASS, CONSUME, REENTER, SWAP_ROOT_ASE
 	}
 
@@ -17,7 +17,7 @@ public class Handler {
 	private String state;
 	private String event;
 	private String svcTrace;
-	private ReturnCodes rc;
+	private ReturnCode rc;
 
 	public String getName() {
 		return name;
@@ -59,11 +59,11 @@ public class Handler {
 		this.svcTrace = svcTrace;
 	}
 
-	public ReturnCodes getRc() {
+	public ReturnCode getRc() {
 		return rc;
 	}
 
-	public void setRc(ReturnCodes rc) {
+	public void setRc(ReturnCode rc) {
 		this.rc = rc;
 	}
 

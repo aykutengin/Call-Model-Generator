@@ -13,36 +13,27 @@ import java.util.regex.Pattern;
 
 import model.ContextApp;
 import model.Handler;
+import model.Handler.ReturnCode;
 import model.IncomingIWSignal;
 import model.LSC;
 import model.ProcessIncomingSignal;
 import model.Signal;
 import model.SIPMessageTrace;
 import model.Transactor;
+import model.Transactor.Type;
 import model.UnifiedSIPMessageTrace;
 
-public class Log {
+public class LogUtility {
 	private final static String PROCESS = "Transactor PROCESS :";
 	private final static String SWAP = "Transactor Swap Root ASE :";
 	private final static String SUSPEND = "Transactor SUSPEND :";
 	private final static String IDLE = "Transactor IDLE :";
 	private final static String OPENSQUAREBRACKET = "[";
 	private final static String CLOSESQUAREBRACKET = "]";
-
 	private final static String PROCESSEVENT = "ASE ProcessEvent :";
 	private final static String CAT_ROOT = "[CAT : ROOT]";
 
-	//static List<Transactor> contextApp.getTransactorList();
 	private ContextApp contextApp;
-	
-	
-
-	/*
-	 * public static void main(String[] args) { Main m = new Main();
-	 * m.readLog("pbx2pbx.log");
-	 * 
-	 * Scriber s = new Scriber(); s.drawCallModel(contextApp.getTransactorList()); }
-	 */
 
 	/**
 	 * Analyze the log file and creates objects.
@@ -60,6 +51,7 @@ public class Log {
 		boolean incomingSIPMessageTraceDetected = false;
 
 		contextApp = ContextApp.getInstance();
+		SignalUtility signalUtility = new SignalUtility();
 		Transactor currentTransactor = null;
 		SIPMessageTrace tempIncomingSignal = null;
 		List<SIPMessageTrace> tempIncomingSignals = new ArrayList<SIPMessageTrace>();
@@ -106,15 +98,7 @@ public class Log {
 				}
 
 				if (processDetected && strLine.contains(PROCESSEVENT) && strLine.contains(CAT_ROOT)) {
-					if (strLine.contains(Transactor.OCM)) {
-						currentTransactor.setType(Transactor.Type.OCM);
-					} else if (strLine.contains(Transactor.CM)) {
-						currentTransactor.setType(Transactor.Type.CM);
-					} else if (strLine.contains(Transactor.IWCM)) {
-						currentTransactor.setType(Transactor.Type.IWCM);
-					} else if (strLine.contains(Transactor.TCM)) {
-						currentTransactor.setType(Transactor.Type.TCM);
-					}
+					currentTransactor.setType(findTypeofTransactor(strLine));
 					processDetected = false;
 				} else if (suspendDetected) {
 					int lastIndex = currentTransactor.getWorkingLines().size() - 1;
@@ -132,7 +116,7 @@ public class Log {
 				}
 				// end of the transactor works
 
-				// start of the transactor works
+				// start of the handler works
 				// Process for Handlers // Finding handlers.
 				if (strLine.contains(Handler.EVENTHANDLER)) {
 					Handler handler = new Handler();
@@ -178,9 +162,9 @@ public class Log {
 					int lastIndex = currentTransactor.getHandlerList().size() - 1;
 					Handler currentHandler = currentTransactor.getHandlerList().get(lastIndex);
 					if (currentHandler.getRc() == null) {
-						currentHandler.setRc(Handler.ReturnCodes.valueOf(parseString(strLine, Handler.EDRC_RC, " ")));
+						currentHandler.setRc(Handler.ReturnCode.valueOf(parseString(strLine, Handler.EDRC_RC, " ")));
 					}
-					if (strLine.contains(Handler.ReturnCodes.INITIATE.toString())) {
+					if (strLine.contains(Handler.ReturnCode.INITIATE.toString())) {
 						String serviceName = parseString(currentHandler.getName(), "", Handler.HANDLER);
 						currentTransactor.getInitiatedServices().add(serviceName);
 					}
@@ -205,17 +189,18 @@ public class Log {
 				if (processIncomingSignalDetected) {
 					if(strLine.contains(ProcessIncomingSignal.MESSAGE)) {
 						ProcessIncomingSignal processIncomingSignal = new ProcessIncomingSignal();
-						String s = parseString(strLine, ProcessIncomingSignal.MESSAGE);
+						processIncomingSignal.setLine(line);
+						String s = parseString(strLine, ProcessIncomingSignal.MESSAGE);				
+						processIncomingSignal.setType(signalUtility.parseTypeofSignal(s));					
 						String[] splittedStr = s.split(" ");
-
 						processIncomingSignal.setId(Integer.parseInt(splittedStr[1]));
 
 						// Parsing the type partition.
 						int lastIndex = splittedStr.length - 1;
 						if (splittedStr[lastIndex].contains("]")) {
 							String[] secondPart = splittedStr[lastIndex].split("\\]");
-							processIncomingSignal.setName(parseSignalName(secondPart[1]));
-							processIncomingSignal.setType(secondPart[0].replace("[", ""));
+							processIncomingSignal.setName(signalUtility.parseSignalName(secondPart[1]));
+							//processIncomingSignal.setType(secondPart[0].replace("[", ""));
 							processIncomingSignal
 									.setTransaction(Integer.parseInt(secondPart[secondPart.length - 1].replace("[", "")));
 						}
@@ -247,17 +232,18 @@ public class Log {
 				if (incomingIWSignalDetected) {
 					if (strLine.contains(IncomingIWSignal.SIGNAL)) {
 						IncomingIWSignal incomingIWSignal = new IncomingIWSignal();
-						String s = parseString(strLine, IncomingIWSignal.SIGNAL);
+						incomingIWSignal.setLine(line);
+						String s = parseString(strLine, IncomingIWSignal.SIGNAL);					
+						incomingIWSignal.setType(signalUtility.parseTypeofSignal(s));				
 						String[] splittedStr = s.split(" ");
-
 						incomingIWSignal.setId(Integer.parseInt(splittedStr[1]));
 
 						// Parsing the type partition.
 						int lastIndex = splittedStr.length - 1;
 						if (splittedStr[lastIndex].contains("]")) {
 							String[] secondPart = splittedStr[lastIndex].split("\\]");
-							incomingIWSignal.setName(parseSignalName(secondPart[1]));
-							incomingIWSignal.setType(secondPart[0].replace("[", ""));
+							incomingIWSignal.setName(signalUtility.parseSignalName(secondPart[1]));
+							//incomingIWSignal.setType(secondPart[0].replace("[", ""));
 							incomingIWSignal.setTransaction(
 									Integer.parseInt(secondPart[secondPart.length - 1].replace("[", "")));
 						}
@@ -302,9 +288,8 @@ public class Log {
 					SIPMessageTrace sipMessageTrace = new SIPMessageTrace();
 					String s = parseString(strLine, "|");
 					sipMessageTrace.setId(Integer.parseInt(parseString(s, " ")));
-					// signal.setName(parseString(s, "SIP_", "_"));
-					sipMessageTrace.setName(parseSignalName(s));
-					sipMessageTrace.setType(parseTypeofSIPMessage(s));
+					sipMessageTrace.setName(signalUtility.parseSignalName(s));
+					sipMessageTrace.setType(signalUtility.parseTypeofSignal(s));
 					sipMessageTrace.setLine(line);
 					if (incomingSIPMessageTraceDetected) {
 						sipMessageTrace.setDirection(SIPMessageTrace.Direction.Incoming);
@@ -373,13 +358,13 @@ public class Log {
 		return "";
 	}
 
-	private String findTypeofTransactor(String strLine) {
+	private Type findTypeofTransactor(String strLine) {
 		if (strLine.contains(Transactor.OCM)) {
-			return Transactor.OCM;
+			return Transactor.Type.OCM;
 		} else if (strLine.contains(Transactor.CM)) {
-			return Transactor.CM;
+			return Transactor.Type.CM;
 		} else if (strLine.contains(Transactor.TCM)) {
-			return Transactor.TCM;
+			return Transactor.Type.TCM;
 		}
 		return null;
 	}
@@ -460,24 +445,9 @@ public class Log {
 
 	}
 
-	private String parseSignalName(String str) {
-		for (String type : Signal.reqandResp) {
-			if (str.contains(type)) {
-				return type;
-			}
-		}
-		return null;
-	}
 
-	private String parseTypeofSIPMessage(String str) {
-		if(str.contains(Signal.REQUEST)) {
-			return Signal.REQUEST;
-		}else if(str.contains(Signal.RESPONSE)){
-			return Signal.RESPONSE;
-		}
-		return null;
-	}
 	
+	@Deprecated
 	private void callModelHelper() {
 		try (PrintWriter out = new PrintWriter("output.txt")) {
 			if (contextApp.getTransactorList() != null) {
@@ -496,6 +466,7 @@ public class Log {
 	/**
 	 * Returns id of the transactor which has the given signal.
 	 */
+	@Deprecated
 	private int searchSignal(Signal signal) {
 		for (Transactor transactor : contextApp.getTransactorList()) {
 			for (Handler handler : transactor.getHandlerList()) {
@@ -511,6 +482,7 @@ public class Log {
 	/**
 	 * Finds the which signal passes over which transactors.
 	 * */
+	@Deprecated
 	private void signalPath(List<Transactor> transactors, List<SIPMessageTrace> sipMessageTraces) {
 		/*for (Transactor transactor : transactors) {
 			System.out.println(transactor.getType() + " - " + transactor.getWorkingLines());
@@ -555,7 +527,7 @@ public class Log {
 		return unifiedSIPMessageTraceList;
 	}
 	
-	private void createReport(ContextApp context) {
+	private void createReport(ContextApp contextApp) {
 		/*for (Transactor transactor : context.getTransactorList()) {
 			System.out.println(transactor.getType() + " - " + transactor.getId());
 			for (ProcessIncomingSignal incomingSig : transactor.getProcessIncomingSignalList()) {
@@ -582,14 +554,21 @@ public class Log {
 			}
 		}*/
 		
-		for (SIPMessageTrace sipMsgTrace : context.getSipMessageTraceList()) {
-			System.out.println(sipMsgTrace.getName());
-			for (Transactor transactor : context.getTransactorList()) {
+		for (SIPMessageTrace sipMsgTrace : contextApp.getSipMessageTraceList()) {
+			System.out.println(sipMsgTrace.getName() + " - " + sipMsgTrace.getDirection());
+			for (Transactor transactor : contextApp.getTransactorList()) {
 				for (ProcessIncomingSignal processIncSig : transactor.getProcessIncomingSignalList()) {
 					if (sipMsgTrace.equals(processIncSig)) {
-						System.out.println(transactor.getType());
+						System.out.println("\t " + transactor.getType());
+						for (Handler handler : transactor.getHandlerList()) {
+							if (handler.getSignal().getId() == processIncSig.getId()
+									&& handler.getRc() == ReturnCode.INITIATE) {
+								System.out.println("\t \tinitiated service: " + handler.getName());
+							}
+						}
 					}
 				}
+
 			}
 		}
 		

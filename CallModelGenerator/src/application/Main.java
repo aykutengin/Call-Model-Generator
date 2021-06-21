@@ -10,7 +10,7 @@ import model.LSC;
 import model.Signal;
 import model.SIPMessageTrace;
 import model.Transactor;
-import utility.Log;
+import utility.LogUtility;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -23,7 +23,7 @@ import javafx.scene.shape.Line;
 public class Main extends Application {
 	@Override
 	public void start(Stage primaryStage) {
-		Log log = new Log();
+		LogUtility log = new LogUtility();
 		try {
 			primaryStage.setTitle("Call Model Generator");
 			BorderPane root = new BorderPane();
@@ -31,8 +31,10 @@ public class Main extends Application {
 			Button button = new Button("Select log file");
 			button.setOnAction(e -> {
 				File selectedFile = fileChooser.showOpenDialog(primaryStage);
-				List<Transactor> transactorList = log.readLog(selectedFile.getAbsolutePath());				
-				//DrawCallModel(transactorList);
+				if (selectedFile != null) {
+					List<Transactor> transactorList = log.readLog(selectedFile.getAbsolutePath());
+					drawCallModel(transactorList);
+				}
 			});
 			root.setCenter(button);
 			Scene scene = new Scene(root, 400, 400);
@@ -43,7 +45,6 @@ public class Main extends Application {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
 	}
 
 	public static void main(String[] args) {
@@ -55,7 +56,8 @@ public class Main extends Application {
 	 * 
 	 * @param transactorList
 	 */
-	private void DrawCallModel(List<Transactor> transactorList) {
+	@Deprecated
+	private void drawCallModel(List<Transactor> transactorList) {
 		int startX = 100;
 		
 		int transactorGapX = 100;
@@ -178,10 +180,11 @@ public class Main extends Application {
 	
 	/**
 	 * Draws inter transactor signals. */
-	/*private void interTransactorSignal(Transactor transactor) {
+	@Deprecated
+	private void interTransactorSignal(Transactor transactor) {
 		List<Signal> signals = transactor.getTransactorSignal();
 		for (Signal signal : signals) {
-			if (transactor.getType().equals(Transactor.Type.OCM)) {
+			/*if (transactor.getType().equals(Transactor.Type.OCM)) {
 				if(signal.getLsc().getType().equals(LSC.Type.SipBBUALSC)) {
 					
 				}
@@ -192,9 +195,9 @@ public class Main extends Application {
 
 			} else if (transactor.getType().equals(Transactor.Type.TCM)) {
 
-			}
+			}*/
 		}
-	}*/
+	}
 	
 	private static void drawArrowLine(double startX, double startY, double endX, double endY, Group group) {
 		// get the slope of the line and find its angle

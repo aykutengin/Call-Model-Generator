@@ -12,7 +12,6 @@ public class SIPMessageTrace extends Signal {
 	}
 
 	private Direction direction;
-	private int line;
 
 	public Direction getDirection() {
 		return direction;
@@ -22,17 +21,9 @@ public class SIPMessageTrace extends Signal {
 		this.direction = direction;
 	}
 
-	public int getLine() {
-		return line;
-	}
-
-	public void setLine(int line) {
-		this.line = line;
-	}
-
 	@Override
 	public String toString() {
-		return super.toString() + "\nSIPMessageTrace [direction=" + direction + ", line=" + line + "]";
+		return super.toString() + "\nSIPMessageTrace [direction=" + direction + "]";
 	}
 
 	@Override

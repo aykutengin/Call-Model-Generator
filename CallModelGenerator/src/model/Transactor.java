@@ -26,8 +26,7 @@ public class Transactor {
 	private List<Signal> transactorSignal = new ArrayList<Signal>();
 	
 	private List<ProcessIncomingSignal> processIncomingSignalList = new ArrayList<ProcessIncomingSignal>();
-	private List<IncomingIWSignal> incomingIWSignal = new ArrayList<IncomingIWSignal>();
-	
+	private List<IncomingIWSignal> incomingIWSignal = new ArrayList<IncomingIWSignal>();	
 	private boolean leafTCM;
 
 	public Transactor(int id) {
