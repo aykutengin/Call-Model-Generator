@@ -13,9 +13,10 @@ public class Transactor {
 	public enum Type {
 		OCM, CM, IWCM, TCM
 	}
-	
-	private static int lastlyUsedTransactorId; //For setting the outgoing signals. Outgoing signal goes from the lastly used transactor.
-	
+
+	private static int lastlyUsedTransactorId; // For setting the outgoing signals. Outgoing signal goes from the lastly
+												// used transactor.
+
 	private int id;
 	private Type type;
 	private List<String> initiatedServices = new ArrayList<String>();
@@ -24,9 +25,9 @@ public class Transactor {
 	private List<List<Integer>> workingLines = new ArrayList<>();
 	private List<SIPMessageTrace> sipSignals = new ArrayList<SIPMessageTrace>();
 	private List<Signal> transactorSignal = new ArrayList<Signal>();
-	
+
 	private List<ProcessIncomingSignal> processIncomingSignalList = new ArrayList<ProcessIncomingSignal>();
-	private List<IncomingIWSignal> incomingIWSignal = new ArrayList<IncomingIWSignal>();	
+	private List<IncomingIWSignal> incomingIWSignal = new ArrayList<IncomingIWSignal>();
 	private boolean leafTCM;
 
 	public Transactor(int id) {
@@ -97,16 +98,16 @@ public class Transactor {
 		return transactorSignal;
 	}
 
+	public void setTransactorSignal(List<Signal> transactorSignal) {
+		this.transactorSignal = transactorSignal;
+	}
+
 	public List<SIPMessageTrace> getSipSignals() {
 		return sipSignals;
 	}
 
 	public void setSipSignals(List<SIPMessageTrace> sipSignals) {
 		this.sipSignals = sipSignals;
-	}
-
-	public void setTransactorSignal(List<Signal> transactorSignal) {
-		this.transactorSignal = transactorSignal;
 	}
 
 	@Override
@@ -116,7 +117,7 @@ public class Transactor {
 				+ ", transactorSignal=" + transactorSignal + ", processIncomingSignalList=" + processIncomingSignalList
 				+ ", incomingIWSignal=" + incomingIWSignal + ", leafTCM=" + leafTCM + "]";
 	}
-	
+
 	public List<ProcessIncomingSignal> getProcessIncomingSignalList() {
 		return processIncomingSignalList;
 	}
