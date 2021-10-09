@@ -7,7 +7,6 @@ import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
-import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import model.LSC;
@@ -79,12 +78,7 @@ public class DrawUtility {
 					break;
 				}
 				
-				group.getChildren().add(transactorShape);
-				Text text = new Text("This is some text");
-				//text.setFont(FontWeight.BOLD, 36);
-				//group.g
-				
-				
+				group.getChildren().add(transactorShape);				
 				
 				for (int j = 0; j < transactor.getLscList().size(); j++) {
 					LSC lsc = transactor.getLscList().get(j);

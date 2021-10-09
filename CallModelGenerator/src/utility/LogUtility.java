@@ -528,50 +528,21 @@ public class LogUtility {
 	}
 	
 	private void createReport(ContextApp contextApp) {
-		/*for (Transactor transactor : context.getTransactorList()) {
-			System.out.println(transactor.getType() + " - " + transactor.getId());
-			for (ProcessIncomingSignal incomingSig : transactor.getProcessIncomingSignalList()) {
-				System.out.println("\t" + incomingSig.getName() + "(Incoming) - " + incomingSig.getId() + " - " + incomingSig.getCallId());
-			}
-			System.out.println("------------------------------------------------");
-			for (IncomingIWSignal outgoingSig : transactor.getIncomingIWSignal()) {
-				System.out.println("\t" + outgoingSig.getName() + "(Outgoing) - " + outgoingSig.getId() + " - " + outgoingSig.getCallId());
-			}
-		}
-		System.out.println("\n-------------SipMessages-------------");
-		for (SIPMessageTrace sipMessages : context.getSipMessageTraceList()) {
-			System.out
-					.println(sipMessages.getName() + " - " + sipMessages.getId() + " - " + sipMessages.getDirection() + " - " + sipMessages.getCallId());
-		}*/
-		
-		/*for (Transactor transactor : context.getTransactorList()) {
-			for (ProcessIncomingSignal incomingSig : transactor.getProcessIncomingSignalList()) {
-				for (IncomingIWSignal outgoingSig : transactor.getIncomingIWSignal()) {
-					if (incomingSig.equals(outgoingSig)) {
-
-					}
-				}
-			}
-		}*/
-		
 		for (SIPMessageTrace sipMsgTrace : contextApp.getSipMessageTraceList()) {
 			System.out.println(sipMsgTrace.getName() + " - " + sipMsgTrace.getDirection());
 			for (Transactor transactor : contextApp.getTransactorList()) {
+				// sort signals in here.
 				for (ProcessIncomingSignal processIncSig : transactor.getProcessIncomingSignalList()) {
 					if (sipMsgTrace.equals(processIncSig)) {
+						System.out.println("\t " + processIncSig.getType() + " - " + processIncSig.getLine());
 						System.out.println("\t " + transactor.getType());
-						for (Handler handler : transactor.getHandlerList()) {
-							if (handler.getSignal().getId() == processIncSig.getId()
-									&& handler.getRc() == ReturnCode.INITIATE) {
-								System.out.println("\t \tinitiated service: " + handler.getName());
-							}
+						for (String service : transactor.getInitiatedServices()) {
+							System.out.println("\t \tinitiated service: " + service);
 						}
 					}
 				}
-
 			}
 		}
-		
-		
+
 	}
 }

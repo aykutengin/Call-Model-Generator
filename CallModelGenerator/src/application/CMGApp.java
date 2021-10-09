@@ -26,8 +26,8 @@ public class CMGApp extends Application {
 				File selectedFile = fileChooser.showOpenDialog(primaryStage);
 				if (selectedFile != null && selectedFile.getName().contains(".log")) {
 					List<Transactor> transactorList = log.readLog(selectedFile.getAbsolutePath());
-					DrawUtility du = new DrawUtility();
-					du.drawCallModel(transactorList).show();
+					/*DrawUtility du = new DrawUtility();
+					du.drawCallModel(transactorList).show();*/
 				}
 			});
 			root.setCenter(button);

@@ -28,6 +28,9 @@ public class SignalUtility {
 		return null;
 	}
 
+	/**
+	 * Sorts the signals according to line number.
+	 * */
 	public List<Signal> sortSignals(List<Signal> list) {
 		heapSort(list);
 		return list;
